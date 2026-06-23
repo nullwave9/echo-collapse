@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#f4f2ee;color:#171511;font-family:'Archivo',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  body{overflow-x:hidden}
+  ::selection{background:#0a0a0a;color:#f4f2ee}
+  ::-webkit-scrollbar{width:9px}
+  ::-webkit-scrollbar-track{background:#e9e5dd}
+  ::-webkit-scrollbar-thumb{background:#cbc4b7;border:2px solid #e9e5dd}
+  :focus-visible{outline:2px solid #0a0a0a;outline-offset:3px}
+  @keyframes ecBeat{0%{transform:scale(1)}22%{transform:scale(1.055)}40%{transform:scale(.992)}60%{transform:scale(1.028)}100%{transform:scale(1)}}
+  @keyframes ecGlitch{0%{transform:translateX(0);text-shadow:none;clip-path:inset(0 0 0 0)}20%{transform:translateX(-3px);text-shadow:-3px 0 #97392d,2px 0 #0a0a0a;clip-path:inset(16% 0 50% 0)}42%{transform:translateX(3px);text-shadow:2px 0 #97392d,-2px 0 #0a0a0a;clip-path:inset(58% 0 10% 0)}66%{transform:translateX(-1px);clip-path:inset(8% 0 70% 0)}100%{transform:translateX(0);text-shadow:none;clip-path:inset(0 0 0 0)}}
+  @keyframes ecScroll{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(8px);opacity:1}}
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div ref="{{ rootRef }}" style="position:relative;--pg:0">
+
+  <template id="__bundler_thumbnail"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#f4f2ee"/><circle cx="50" cy="40" r="20" fill="none" stroke="#0a0a0a" stroke-width="4"/><g fill="#0a0a0a"><rect x="22" y="14" width="2" height="6"/><rect x="70" y="22" width="2" height="7"/><rect x="38" y="74" width="2" height="8"/><rect x="60" y="78" width="2" height="6"/><rect x="50" y="68" width="2" height="9"/></g></svg></template>
+
+  <!-- generative background: falling black soot + static -->
+  <canvas ref="{{ canvasRef }}" aria-hidden="true" style="position:fixed;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;display:block"></canvas>
+  <!-- moon backdrop (top only, fades on scroll) -->
+  <img ref="{{ moonRef }}" src="img/moon.webp" alt="" aria-hidden="true" style="position:fixed;top:clamp(-130px,-7vw,-50px);left:50%;transform:translateX(-50%);width:min(560px,84vw);z-index:0;pointer-events:none;opacity:.5;filter:grayscale(1) contrast(1.04) brightness(.96);will-change:opacity,transform">
+  <!-- subtle paper grain / vignette -->
+  <div aria-hidden="true" style="position:fixed;inset:0;z-index:2;pointer-events:none;background:radial-gradient(120% 80% at 50% 0%,transparent 55%,rgba(120,114,102,.14) 100%)"></div>
+
+  <!-- ========================================================== -->
+  <!-- TORRES GÓTICAS LATERALES — se alzan al hacer scroll        -->
+  <!-- IZQ: img/cathedral.webp (portal/arco)  DER: img/roseton.webp -->
+  <!-- ========================================================== -->
+  <img ref="{{ towerLRef }}" src="img/cathedral.webp" alt="" aria-hidden="true" data-tower style="position:fixed;left:0;bottom:clamp(-120px,-8vw,-48px);width:clamp(230px,46vw,740px);height:auto;z-index:3;pointer-events:none;opacity:0;mix-blend-mode:multiply;transform:translate(-46%,64%);transform-origin:bottom left;will-change:opacity,transform">
+  <img ref="{{ towerRRef }}" src="img/roseton.webp" alt="" aria-hidden="true" data-tower style="position:fixed;right:0;bottom:clamp(-120px,-8vw,-48px);width:clamp(210px,42vw,680px);height:auto;z-index:3;pointer-events:none;opacity:0;mix-blend-mode:multiply;transform:translate(46%,64%);transform-origin:bottom right;will-change:opacity,transform">
+
+  <!-- sticky header: shrunken logo lands here -->
+  <div ref="{{ headerRef }}" aria-hidden="true" style="position:fixed;top:0;left:0;right:0;height:66px;z-index:40;pointer-events:none;background:linear-gradient(#f4f2ee 30%,rgba(244,242,238,0));opacity:0;transition:opacity .25s"></div>
+  <img ref="{{ miniLogoRef }}" src="img/logo.webp" alt="" aria-hidden="true" style="position:fixed;top:13px;left:50%;transform:translateX(-50%);width:min(230px,54vw);z-index:41;pointer-events:none;opacity:0;will-change:opacity">
+
+  <!-- LANGUAGE TOGGLE -->
+  <div role="group" data-i18n-aria="toggle.aria" aria-label="Cambiar idioma" style="position:fixed;top:14px;right:14px;z-index:50;display:flex;border:1px solid #cbc4b7;background:rgba(244,242,238,.82);backdrop-filter:blur(8px);font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.12em">
+    <button type="button" data-lang-btn="es" aria-pressed="true" style="appearance:none;border:0;cursor:pointer;padding:8px 13px;background:#0a0a0a;color:#f4f2ee;font-weight:700;font-family:inherit;font-size:inherit;letter-spacing:inherit">ES</button>
+    <button type="button" data-lang-btn="en" aria-pressed="false" style="appearance:none;border:0;cursor:pointer;padding:8px 13px;background:transparent;color:#8a867d;font-weight:400;font-family:inherit;font-size:inherit;letter-spacing:inherit">EN</button>
+  </div>
+
+  <main style="position:relative;z-index:5">
+
+    <!-- ================= HERO ================= -->
+    <section ref="{{ heroRef }}" data-screen-label="Hero" style="min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;padding:120px 22px 64px;text-align:center;position:relative">
+      <!-- ========================================================== -->
+      <!-- IMAGEN · LOGO "ECHO COLLAPSE" (img/logo.webp)               -->
+      <!-- ========================================================== -->
+      <img ref="{{ heroLogoRef }}" src="img/logo.webp" alt="Echo Collapse" style="width:min(860px,94vw);height:auto;will-change:opacity,transform;transform-origin:center top">
+
+      <div style="display:flex;flex-direction:column;align-items:center;gap:13px;max-width:560px">
+        <div data-i18n="hero.kicker" style="font-family:'JetBrains Mono',monospace;font-size:clamp(10px,1.2vw,12px);letter-spacing:.42em;color:#8a867d;text-transform:uppercase;padding-left:.42em">ÁLBUM DEBUT</div>
+        <div style="font-family:'Cinzel',serif;font-weight:800;font-size:clamp(30px,6.4vw,62px);line-height:.96;letter-spacing:.02em;color:#0a0a0a;text-transform:uppercase">What You Want</div>
+      </div>
+
+      <div style="position:absolute;bottom:26px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;animation:ecScroll 2.2s ease-in-out infinite">
+        <span data-i18n="hero.scroll" style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.34em;color:#9a958c;text-transform:uppercase">DESCENDER</span>
+        <span aria-hidden="true" style="width:1px;height:30px;background:linear-gradient(#9a958c,transparent)"></span>
+      </div>
+    </section>
+
+    <!-- ================= EL DISCO ================= -->
+    <section data-screen-label="El Álbum" style="padding:clamp(80px,11vw,150px) 24px;border-top:1px solid #ddd7cc;background:rgba(239,235,228,.55)">
+      <div style="max-width:1140px;margin:0 auto">
+        <div data-i18n="disc.kicker" style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.34em;color:#9a958c;text-transform:uppercase;margin-bottom:18px">01 · EL ÁLBUM</div>
+        <div style="display:flex;flex-wrap:wrap;gap:clamp(34px,5vw,72px);align-items:flex-start">
+
+          <!-- ====================================================== -->
+          <!-- IMÁGENES · PORTADA (frontal) + CONTRAPORTADA (trasera)  -->
+          <!-- Sustituye los src de img/portada.webp e img/contraportada -->
+          <!-- ====================================================== -->
+          <div style="flex:1 1 300px;max-width:430px;display:flex;flex-direction:column;gap:22px">
+
+            <figure data-reveal style="margin:0;opacity:0;transform:translateY(22px);filter:blur(7px);transition:opacity .8s ease 0s,transform .8s ease 0s,filter .8s ease 0s">
+              <div style="position:relative;border:1px solid #d3cdc1;background:#e7e2d9;overflow:hidden;box-shadow:0 20px 46px -30px rgba(10,10,10,.6)">
+                <!-- HUECO IMAGEN · Portada de What You Want → reemplazar el src por la URL definitiva -->
+                <img src="img/portada.webp" alt="Portada de What You Want" style="display:block;width:100%;height:auto;aspect-ratio:1/1;object-fit:cover;filter:grayscale(.04) contrast(1.02)">
+                <span aria-hidden="true" style="position:absolute;top:9px;left:9px;width:15px;height:15px;border-top:1px solid rgba(244,242,238,.72);border-left:1px solid rgba(244,242,238,.72)"></span>
+                <span aria-hidden="true" style="position:absolute;bottom:9px;right:9px;width:15px;height:15px;border-bottom:1px solid rgba(244,242,238,.72);border-right:1px solid rgba(244,242,238,.72)"></span>
+              </div>
+              <figcaption data-i18n="cover.front" style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.26em;color:#8a867d;text-transform:uppercase;margin-top:11px">PORTADA · FRONTAL</figcaption>
+            </figure>
+
+            <figure data-reveal style="margin:0;opacity:0;transform:translateY(22px);filter:blur(7px);transition:opacity .8s ease .1s,transform .8s ease .1s,filter .8s ease .1s">
+              <div style="position:relative;border:1px solid #d3cdc1;background:#e7e2d9;overflow:hidden;box-shadow:0 20px 46px -30px rgba(10,10,10,.6)">
+                <!-- HUECO IMAGEN · Contraportada de What You Want con el tracklist → reemplazar el src por la URL definitiva -->
+                <img src="img/contraportada.webp" alt="Contraportada de What You Want con el tracklist" style="display:block;width:100%;height:auto;aspect-ratio:1/1;object-fit:cover;filter:grayscale(.04) contrast(1.02)">
+                <span aria-hidden="true" style="position:absolute;top:9px;left:9px;width:15px;height:15px;border-top:1px solid rgba(244,242,238,.72);border-left:1px solid rgba(244,242,238,.72)"></span>
+                <span aria-hidden="true" style="position:absolute;bottom:9px;right:9px;width:15px;height:15px;border-bottom:1px solid rgba(244,242,238,.72);border-right:1px solid rgba(244,242,238,.72)"></span>
+              </div>
+              <figcaption data-i18n="cover.back" style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.26em;color:#8a867d;text-transform:uppercase;margin-top:11px">CONTRAPORTADA · TRACKLIST</figcaption>
+            </figure>
+
+          </div>
+
+          <div style="flex:3 1 400px;min-width:0">
+            <h2 data-i18n="disc.title" style="margin:0;font-family:'Cinzel',serif;font-weight:900;font-size:clamp(38px,7vw,80px);line-height:.94;letter-spacing:.012em;color:#0a0a0a;text-transform:uppercase">El Álbum</h2>
+            <div data-i18n="disc.meta" style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.2em;color:#97392d;text-transform:uppercase;margin:14px 0 4px">WHAT YOU WANT · 8 TEMAS</div>
+            <div data-i18n="disc.note" style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:#9a958c;margin-bottom:20px">Pulsa cualquier tema para leer su letra.</div>
+
+            <div style="display:flex;flex-direction:column">
+
+              <div data-track style="display:grid;grid-template-columns:34px 1fr 12px;align-items:center;gap:14px;padding:14px 4px;border-top:1px solid #d9d3c8"><span style="font-family:'JetBrains Mono',monospace;color:#a39c8f;font-size:13px">01</span><span style="min-width:0"><span data-track-title data-lyrics="rise" role="button" tabindex="0" aria-haspopup="dialog" title="Ver letra" style="display:inline-block;font-family:'Cinzel',serif;font-weight:600;letter-spacing:.01em;font-size:clamp(16px,2.1vw,23px);text-transform:uppercase;color:#1a1813;cursor:pointer">Rise in the Noise</span></span><span data-dot aria-hidden="true" style="width:7px;height:7px;border-radius:50%;background:#cdc6b9;justify-self:end;transition:background .2s,transform .2s"></span></div>
+
+              <div data-track style="display:grid;grid-template-columns:34px 1fr 12px;align-items:center;gap:14px;padding:14px 4px 14px 12px;border-top:1px solid #d9d3c8;border-left:2px solid #97392d;background:linear-gradient(90deg,rgba(151,57,45,.07),transparent 62%)"><span style="font-family:'JetBrains Mono',monospace;color:#97392d;font-size:13px;font-weight:700">02</span><span style="min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 11px"><span data-track-title data-lyrics="midnight" role="button" tabindex="0" aria-haspopup="dialog" title="Ver letra" style="display:inline-block;font-family:'Cinzel',serif;font-weight:700;letter-spacing:.01em;font-size:clamp(16px,2.1vw,23px);text-transform:uppercase;color:#0a0a0a;cursor:pointer">Midnight Conversations</span><span data-i18n="flag" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.22em;color:#f4f2ee;background:#97392d;padding:3px 7px;text-transform:uppercase;font-weight:700">TEMA BANDERA</span></span><span data-dot aria-hidden="true" style="width:7px;height:7px;border-radius:50%;background:#97392d;justify-self:end;transition:background .2s,transform .2s"></span></div>
+
+              <div data-track style="display:grid;grid-template-columns:34px 1fr 12px;align-items:center;gap:14px;padding:14px 4px;border-top:1px solid #d9d3c8"><span style="font-family:'JetBrains Mono',monospace;color:#a39c8f;font-size:13px">03</span><span style="min-width:0"><span data-track-title data-lyrics="loyal" role="button" tabindex="0" aria-haspopup="dialog" title="Ver letra" style="display:inline-block;font-family:'Cinzel',serif;font-weight:600;letter-spacing:.01em;font-size:clamp(16px,2.1vw,23px);text-transform:uppercase;color:#1a1813;cursor:pointer">Loyal</span></span><span data-dot aria-hidden="true" style="width:7px;height:7px;border-radius:50%;background:#cdc6b9;justify-self:end;transition:background .2s,transform .2s"></span></div>
+
+              <div data-track style="display:grid;grid-template-columns:34px 1fr 12px;align-items:center;gap:14px;padding:14px 4px;border-top:1px solid #d9d3c8"><span style="font-family:'JetBrains Mono',monospace;color:#a39c8f;font-size:13px">04</span><span style="min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px"><span data-track-title data-lyrics="dog" role="button" tabindex="0" aria-haspopup="dialog" title="Ver letra" style="display:inline-block;font-family:'Cinzel',serif;font-weight:600;letter-spacing:.01em;font-size:clamp(16px,2.1vw,23px);text-transform:uppercase;color:#1a1813;cursor:pointer">Dog of God</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;color:#9a958c">feat. Goran</span></span><span data-dot aria-hidden="true" style="width:7px;height:7px;border-radius:50%;background:#cdc6b9;justify-self:end;transition:background .2s,transform .2s"></span></div>
+
+              <div data-track style="display:grid;grid-template-columns:34px 1fr 12px;align-items:center;gap:14px;padding:14px 4px;border-top:1px solid #d9d3c8"><span style="font-family:'JetBrains Mono',monospace;color:#a39c8f;font-size:13px">05</span><span style="min-width:0"><span data-track-title data-lyrics="closer" role="button" tabindex="0" aria-haspopup="dialog" title="Ver letra" style="display:inline-block;font-family:'Cinzel',serif;font-weight:600;letter-spacing:.01em;font-size:clamp(16px,2.1vw,23px);text-transform:uppercase;color:#1a1813;cursor:pointer">Closer Than the Pain</span></span><span data-dot aria-hidden="true" style="width:7px;height:7px;border-radius:50%;background:#cdc6b9;justify-self:end;transition:background .2s,transform .2s"></span></div>
+
+              <div data-track style="display:grid;grid-template-columns:34px 1fr 12px;align-items:center;gap:14px;padding:14px 4px;border-top:1px solid #d9d3c8"><span style="font-family:'JetBrains Mono',monospace;color:#a39c8f;font-size:13px">06</span><span style="min-width:0"><span data-track-title data-lyrics="silent" role="button" tabindex="0" aria-haspopup="dialog" title="Ver letra" style="display:inline-block;font-family:'Cinzel',serif;font-weight:600;letter-spacing:.01em;font-size:clamp(16px,2.1vw,23px);text-transform:uppercase;color:#1a1813;cursor:pointer">Silent Gold</span></span><span data-dot aria-hidden="true" style="width:7px;height:7px;border-radius:50%;background:#cdc6b9;justify-self:end;transition:background .2s,transform .2s"></span></div>
+
+              <div data-track style="display:grid;grid-template-columns:34px 1fr 12px;align-items:center;gap:14px;padding:14px 4px;border-top:1px solid #d9d3c8"><span style="font-family:'JetBrains Mono',monospace;color:#a39c8f;font-size:13px">07</span><span style="min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px"><span data-track-title data-lyrics="youandme" role="button" tabindex="0" aria-haspopup="dialog" title="Ver letra" style="display:inline-block;font-family:'Cinzel',serif;font-weight:600;letter-spacing:.01em;font-size:clamp(16px,2.1vw,23px);text-transform:uppercase;color:#1a1813;cursor:pointer">You and Me</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;color:#9a958c">feat. Lana</span></span><span data-dot aria-hidden="true" style="width:7px;height:7px;border-radius:50%;background:#cdc6b9;justify-self:end;transition:background .2s,transform .2s"></span></div>
+
+              <div data-track style="display:grid;grid-template-columns:34px 1fr 12px;align-items:center;gap:14px;padding:14px 4px;border-top:1px solid #d9d3c8;border-bottom:1px solid #d9d3c8"><span style="font-family:'JetBrains Mono',monospace;color:#a39c8f;font-size:13px">08</span><span style="min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px"><span data-track-title data-lyrics="soft" role="button" tabindex="0" aria-haspopup="dialog" title="Ver letra" style="display:inline-block;font-family:'Cinzel',serif;font-weight:600;letter-spacing:.01em;font-size:clamp(16px,2.1vw,23px);text-transform:uppercase;color:#1a1813;cursor:pointer">Soft Luna</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;color:#9a958c">feat. Lana</span></span><span data-dot aria-hidden="true" style="width:7px;height:7px;border-radius:50%;background:#cdc6b9;justify-self:end;transition:background .2s,transform .2s"></span></div>
+            </div>
+
+            <!-- ===== CTA · PRE-GUARDADO (acción principal) ===== -->
+            <div data-presave-block style="margin-top:34px;padding-top:28px;border-top:1px solid #d9d3c8;display:flex;flex-direction:column;align-items:flex-start;gap:11px">
+              <div data-i18n="presave.title" style="font-family:'Cinzel',serif;font-weight:800;font-size:clamp(20px,2.6vw,28px);line-height:1.05;letter-spacing:.01em;color:#0a0a0a;text-transform:uppercase">Disponible el 30 de junio</div>
+              <p data-i18n="presave.note" style="margin:0;max-width:440px;font-family:'Archivo',sans-serif;font-weight:400;font-size:clamp(13px,1.5vw,15px);line-height:1.6;color:#5e5b54;text-wrap:pretty">Un clic y lo tendrás esperándote el día del estreno. Gratis.</p>
+              <a data-presave data-i18n="presave.btn" href="https://distrokid.com/hyperfollow/echocollapse/what-you-want" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;justify-content:center;gap:14px;margin-top:5px;padding:18px 34px;background:#97392d;color:#f4f2ee;font-family:'Cinzel',serif;font-weight:800;font-size:clamp(15px,1.9vw,20px);letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border:1px solid #97392d;box-shadow:0 16px 38px -22px rgba(151,57,45,.9);cursor:pointer;transition:background .22s ease,color .22s ease,transform .22s ease,box-shadow .22s ease">PREGUARDAR EN SPOTIFY</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SÍMBOLO (discreet interstitial) ================= -->
+    <section data-screen-label="Simbolo" style="padding:clamp(70px,10vw,130px) 24px;border-top:1px solid #ddd7cc;text-align:center">
+      <div data-reveal style="max-width:540px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:22px;opacity:0;transform:translateY(26px);filter:blur(8px);transition:opacity 1s ease,transform 1s ease,filter 1s ease">
+        <!-- ====================================================== -->
+        <!-- IMAGEN · SÍMBOLO DEL GRUPO (img/symbol.webp)            -->
+        <!-- ====================================================== -->
+        <img src="img/symbol.webp" alt="Símbolo de Echo Collapse" style="width:min(560px,88vw);height:auto;mix-blend-mode:multiply">
+        <div style="display:flex;flex-direction:column;gap:13px;align-items:center">
+          <div data-i18n="sym.kicker" style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.36em;color:#a39c8f;text-transform:uppercase">EL SÍMBOLO</div>
+          <p data-i18n="sym.line" style="margin:0;font-family:'Cinzel',serif;font-weight:600;font-style:italic;font-size:clamp(19px,3vw,28px);line-height:1.35;color:#1a1813">Se agrieta, pero no cede.</p>
+          <p data-i18n="sym.body" style="margin:0;font-family:'Archivo',sans-serif;font-weight:400;font-size:clamp(13px,1.5vw,15.5px);line-height:1.7;color:#5e5b54;max-width:460px">El sistema empuja para rompernos. Pero lo esencial recibe el golpe y aprende a resistir.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= LA BANDA ================= -->
+    <section data-screen-label="La Banda" style="padding:clamp(80px,11vw,150px) 24px;border-top:1px solid #ddd7cc;background:rgba(239,235,228,.55)">
+      <div style="max-width:1180px;margin:0 auto">
+        <div data-i18n="band.kicker" style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.34em;color:#9a958c;text-transform:uppercase;margin-bottom:18px">02 · LA BANDA</div>
+        <h2 data-i18n="band.title" style="margin:0;font-family:'Cinzel',serif;font-weight:900;font-size:clamp(38px,7vw,80px);line-height:.94;letter-spacing:.012em;color:#0a0a0a;text-transform:uppercase">La Banda</h2>
+        <div data-i18n="band.sub" style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#9a958c;margin:14px 0 36px">Cinco siluetas. Pasa el cursor o toca para revelar.</div>
+
+        <!-- MEMBER CARDS: silhouette -> photo on hover/touch -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:16px">
+
+          <figure data-member data-reveal style="margin:0;opacity:0;transform:translateY(28px);filter:blur(8px);transition:opacity .8s ease,transform .8s ease,filter .8s ease">
+            <div data-card tabindex="0" role="button" aria-pressed="false" aria-label="Lobo Augusto, Voz" style="position:relative;aspect-ratio:3/4;overflow:hidden;background:#e7e2d9;border:1px solid #d3cdc1;cursor:pointer">
+              <img src="img/lobo.webp" alt="Lobo Augusto" data-portrait style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 16%;filter:brightness(0);transform:scale(1.03);transition:filter .55s ease,transform 1s ease">
+              <span aria-hidden="true" data-num style="position:absolute;top:10px;left:11px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;color:#f4f2ee;mix-blend-mode:difference">01</span>
+            </div>
+            <figcaption style="margin-top:12px"><div style="font-family:'Cinzel',serif;font-weight:700;font-size:clamp(17px,1.7vw,21px);color:#0a0a0a;text-transform:uppercase;line-height:1">Lobo Augusto</div><div data-i18n="role.voice" style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.16em;color:#7a766d;text-transform:uppercase;margin-top:6px">VOZ · FRONTMAN</div></figcaption>
+          </figure>
+
+          <figure data-member data-reveal style="margin:0;opacity:0;transform:translateY(28px);filter:blur(8px);transition:opacity .8s ease .08s,transform .8s ease .08s,filter .8s ease .08s">
+            <div data-card tabindex="0" role="button" aria-pressed="false" aria-label="Zane Ravn, Guitarra" style="position:relative;aspect-ratio:3/4;overflow:hidden;background:#e7e2d9;border:1px solid #d3cdc1;cursor:pointer">
+              <img src="img/zane.webp" alt="Zane Ravn" data-portrait style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 16%;filter:brightness(0);transform:scale(1.03);transition:filter .55s ease,transform 1s ease">
+              <span aria-hidden="true" data-num style="position:absolute;top:10px;left:11px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;color:#f4f2ee;mix-blend-mode:difference">02</span>
+            </div>
+            <figcaption style="margin-top:12px"><div style="font-family:'Cinzel',serif;font-weight:700;font-size:clamp(17px,1.7vw,21px);color:#0a0a0a;text-transform:uppercase;line-height:1">Zane Ravn</div><div data-i18n="role.guitar" style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.16em;color:#7a766d;text-transform:uppercase;margin-top:6px">GUITARRA</div></figcaption>
+          </figure>
+
+          <figure data-member data-reveal style="margin:0;opacity:0;transform:translateY(28px);filter:blur(8px);transition:opacity .8s ease .16s,transform .8s ease .16s,filter .8s ease .16s">
+            <div data-card tabindex="0" role="button" aria-pressed="false" aria-label="Theo Ravn, Bajo" style="position:relative;aspect-ratio:3/4;overflow:hidden;background:#e7e2d9;border:1px solid #d3cdc1;cursor:pointer">
+              <img src="img/theo.webp" alt="Theo Ravn" data-portrait style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 22%;filter:brightness(0);transform:scale(1.03);transition:filter .55s ease,transform 1s ease">
+              <span aria-hidden="true" data-num style="position:absolute;top:10px;left:11px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;color:#f4f2ee;mix-blend-mode:difference">03</span>
+            </div>
+            <figcaption style="margin-top:12px"><div style="font-family:'Cinzel',serif;font-weight:700;font-size:clamp(17px,1.7vw,21px);color:#0a0a0a;text-transform:uppercase;line-height:1">Theo Ravn</div><div data-i18n="role.bass" style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.16em;color:#7a766d;text-transform:uppercase;margin-top:6px">BAJO</div></figcaption>
+          </figure>
+
+          <figure data-member data-reveal style="margin:0;opacity:0;transform:translateY(28px);filter:blur(8px);transition:opacity .8s ease .24s,transform .8s ease .24s,filter .8s ease .24s">
+            <div data-card tabindex="0" role="button" aria-pressed="false" aria-label="Dorian Stone, Batería" style="position:relative;aspect-ratio:3/4;overflow:hidden;background:#e7e2d9;border:1px solid #d3cdc1;cursor:pointer">
+              <img src="img/dorian.webp" alt="Dorian Stone" data-portrait style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 14%;filter:brightness(0);transform:scale(1.03);transition:filter .55s ease,transform 1s ease">
+              <span aria-hidden="true" data-num style="position:absolute;top:10px;left:11px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;color:#f4f2ee;mix-blend-mode:difference">04</span>
+            </div>
+            <figcaption style="margin-top:12px"><div style="font-family:'Cinzel',serif;font-weight:700;font-size:clamp(17px,1.7vw,21px);color:#0a0a0a;text-transform:uppercase;line-height:1">Dorian Stone</div><div data-i18n="role.drums" style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.16em;color:#7a766d;text-transform:uppercase;margin-top:6px">BATERÍA</div></figcaption>
+          </figure>
+
+          <figure data-member data-reveal style="margin:0;opacity:0;transform:translateY(28px);filter:blur(8px);transition:opacity .8s ease .32s,transform .8s ease .32s,filter .8s ease .32s">
+            <div data-card tabindex="0" role="button" aria-pressed="false" aria-label="Six, DJ / Sampler" style="position:relative;aspect-ratio:3/4;overflow:hidden;background:#e7e2d9;border:1px solid #d3cdc1;cursor:pointer">
+              <img src="img/six.webp" alt="Six" data-portrait style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%;filter:brightness(0);transform:scale(1.03);transition:filter .55s ease,transform 1s ease">
+              <span aria-hidden="true" data-num style="position:absolute;top:10px;left:11px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;color:#f4f2ee;mix-blend-mode:difference">05</span>
+            </div>
+            <figcaption style="margin-top:12px"><div style="font-family:'Cinzel',serif;font-weight:700;font-size:clamp(17px,1.7vw,21px);color:#0a0a0a;text-transform:uppercase;line-height:1">Six</div><div data-i18n="role.dj" style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.16em;color:#7a766d;text-transform:uppercase;margin-top:6px">DJ / SAMPLER</div></figcaption>
+          </figure>
+
+        </div>
+
+        <!-- GROUP PHOTO (landscape) -->
+        <figure data-reveal style="margin:48px 0 0;position:relative;opacity:0;transform:translateY(30px);filter:blur(9px);transition:opacity .95s ease,transform .95s ease,filter .95s ease">
+          <!-- ====================================================== -->
+          <!-- IMAGEN · FOTO GRUPAL (img/group.webp) — incl. Lana      -->
+          <!-- ====================================================== -->
+          <div style="position:relative;border:1px solid #d3cdc1;overflow:hidden;background:#0a0a0a">
+            <img src="img/group.webp" alt="Echo Collapse, foto grupal con Lana" style="display:block;width:100%;height:auto">
+          </div>
+          <figcaption data-i18n="band.group" style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#8a867d;text-transform:uppercase;margin-top:12px">FOTO GRUPAL · CON LANA</figcaption>
+        </figure>
+
+        <!-- GUESTS -->
+        <div style="margin-top:48px;padding-top:30px;border-top:1px solid #d9d3c8">
+          <div data-i18n="guests" style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.32em;color:#9a958c;text-transform:uppercase;margin-bottom:20px">INVITADOS</div>
+          <div data-i18n="guests.note" style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;color:#b3aca0;margin:-12px 0 22px">Voces invitadas · pasa el cursor o toca para revelar.</div>
+          <div style="display:flex;flex-wrap:wrap;gap:22px">
+            <!-- LANA (invitada) — tarjeta más pequeña + marco/passe-partout -->
+            <figure data-member data-guest data-reveal style="margin:0;width:188px;max-width:44vw;opacity:0;transform:translateY(22px);filter:blur(7px);transition:opacity .8s ease,transform .8s ease,filter .8s ease">
+              <div style="padding:7px;border:1px solid #cdc6b9;background:rgba(244,242,238,.55)">
+                <div data-card tabindex="0" role="button" aria-pressed="false" aria-label="Lana Augusto, voz invitada" style="position:relative;aspect-ratio:4/5;overflow:hidden;background:#e7e2d9;border:1px solid #d3cdc1;cursor:pointer">
+                  <img src="img/lana.webp" alt="Lana Augusto" data-portrait style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 12%;filter:brightness(0);transform:scale(1.03);transition:filter .55s ease,transform 1s ease">
+                  <span data-i18n="guest.tagF" style="position:absolute;top:8px;left:8px;font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.2em;color:#f4f2ee;background:#0a0a0a;padding:3px 6px;text-transform:uppercase">INVITADA</span>
+                </div>
+              </div>
+              <figcaption style="margin-top:11px"><div style="font-family:'Cinzel',serif;font-weight:700;font-size:16px;color:#0a0a0a;text-transform:uppercase;line-height:1">Lana Augusto</div><div data-i18n="lana.desc" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.04em;color:#7a766d;margin-top:6px;line-height:1.5">Voz invitada en "Soft Luna" y "You and Me"</div></figcaption>
+            </figure>
+            <!-- GORAN (invitado) -->
+            <figure data-member data-guest data-reveal style="margin:0;width:188px;max-width:44vw;opacity:0;transform:translateY(22px);filter:blur(7px);transition:opacity .8s ease .1s,transform .8s ease .1s,filter .8s ease .1s">
+              <div style="padding:7px;border:1px solid #cdc6b9;background:rgba(244,242,238,.55)">
+                <div data-card tabindex="0" role="button" aria-pressed="false" aria-label="Goran, voz gutural invitada" style="position:relative;aspect-ratio:4/5;overflow:hidden;background:#e7e2d9;border:1px solid #d3cdc1;cursor:pointer">
+                  <img src="img/goran.webp" alt="Goran" data-portrait style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 14%;filter:brightness(0);transform:scale(1.03);transition:filter .55s ease,transform 1s ease">
+                  <span data-i18n="guest.tagM" style="position:absolute;top:8px;left:8px;font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.2em;color:#f4f2ee;background:#0a0a0a;padding:3px 6px;text-transform:uppercase">INVITADO</span>
+                </div>
+              </div>
+              <figcaption style="margin-top:11px"><div style="font-family:'Cinzel',serif;font-weight:700;font-size:16px;color:#0a0a0a;text-transform:uppercase;line-height:1">Goran</div><div data-i18n="goran.desc" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.04em;color:#7a766d;margin-top:6px;line-height:1.5">Voz gutural invitada en "Dog of God"</div></figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= ESCUCHAR ================= -->
+    <section data-screen-label="Escuchar" style="padding:clamp(80px,11vw,150px) 24px clamp(54px,7vw,90px);border-top:1px solid #ddd7cc">
+      <div style="max-width:760px;margin:0 auto;text-align:center">
+        <div data-i18n="listen.kicker" style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.34em;color:#9a958c;text-transform:uppercase;margin-bottom:18px">03 · ESCUCHAR</div>
+        <h2 data-i18n="listen.title" style="margin:0 0 12px;font-family:'Cinzel',serif;font-weight:900;font-size:clamp(40px,8vw,90px);line-height:.94;color:#0a0a0a;text-transform:uppercase">Escuchar</h2>
+        <div data-i18n="listen.note" style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;color:#9a958c;margin-bottom:34px">El álbum aún no está distribuido.</div>
+
+        <div style="margin:8px auto 0;max-width:600px;padding-top:22px;border-top:1px solid #ddd7cc;display:flex;flex-direction:column;gap:8px">
+          <p style="margin:0;font-family:'Archivo',sans-serif;font-weight:400;font-size:11.5px;line-height:1.7;color:#8a867d">Cada palabra nació de una intención humana. La inteligencia artificial fue solo una herramienta más en el camino.</p>
+          <p style="margin:0;font-family:'Archivo',sans-serif;font-weight:400;font-style:italic;font-size:11px;line-height:1.65;color:#b3aca0">Every word was born from human intention. Artificial intelligence was just another tool along the way.</p>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.3em;color:#c2bbae;text-transform:uppercase;margin-top:26px">ECHO COLLAPSE · OROTHLAND · MMXXVI</div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= MODAL · LETRAS ================= -->
+  <div data-lyrics-modal role="dialog" aria-modal="true" aria-hidden="true" aria-label="Letra" style="position:fixed;inset:0;z-index:90;display:none;align-items:flex-start;justify-content:center;padding:clamp(12px,4vw,52px) clamp(10px,3vw,24px);opacity:0;transition:opacity .24s ease">
+    <div data-modal-backdrop style="position:absolute;inset:0;background:rgba(8,7,6,.84);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)"></div>
+    <div data-modal-panel style="position:relative;z-index:1;display:flex;flex-direction:column;width:min(680px,100%);max-height:min(90vh,940px);background:#f4f2ee;border:1px solid #cbc4b7;box-shadow:0 44px 130px -34px rgba(0,0,0,.72);opacity:0;transform:translateY(14px);transition:opacity .26s ease,transform .26s ease">
+      <div style="flex:0 0 auto;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 22px 16px;border-bottom:1px solid #ddd7cc;background:linear-gradient(#f4f2ee,#efe9e1)">
+        <div style="min-width:0">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.32em;color:#a39c8f;text-transform:uppercase;margin-bottom:9px"><span data-modal-label>LETRA</span> · <span data-modal-num>01</span></div>
+          <div data-modal-title style="font-family:'Cinzel',serif;font-weight:800;font-size:clamp(23px,4.8vw,36px);line-height:1.0;letter-spacing:.01em;color:#0a0a0a;text-transform:uppercase">—</div>
+        </div>
+        <button type="button" data-modal-close aria-label="Cerrar" style="appearance:none;flex:0 0 auto;width:40px;height:40px;border:1px solid #cbc4b7;background:transparent;color:#3a352d;cursor:pointer;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;transition:background .18s,color .18s">✕</button>
+      </div>
+      <div data-modal-body style="flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:24px 22px 30px"></div>
+      <div style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 22px;border-top:1px solid #ddd7cc;background:#efe9e1">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.22em;color:#b3aca0;text-transform:uppercase">EN · ES</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.22em;color:#b3aca0;text-transform:uppercase">ECHO COLLAPSE</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  rootRef = (el) => { if (el) this.rootEl = el; };
+  canvasRef = (el) => { if (el) this.canvasEl = el; };
+  moonRef = (el) => { if (el) this.moonEl = el; };
+  heroRef = (el) => { if (el) this.heroEl = el; };
+  heroLogoRef = (el) => { if (el) this.heroLogoEl = el; };
+  miniLogoRef = (el) => { if (el) this.miniLogoEl = el; };
+  headerRef = (el) => { if (el) this.headerEl = el; };
+  towerLRef = (el) => { if (el) this.towerLEl = el; };
+  towerRRef = (el) => { if (el) this.towerREl = el; };
+
+  i18n = {
+    'toggle.aria': { es: 'Cambiar idioma', en: 'Switch language' },
+    'hero.kicker': { es: 'ÁLBUM DEBUT', en: 'DEBUT ALBUM' },
+    'hero.sub': { es: 'RUINA SAGRADA · POLVO NEGRO QUE CAE', en: 'SACRED RUIN · BLACK DUST FALLING' },
+    'hero.scroll': { es: 'DESCENDER', en: 'DESCEND' },
+    'disc.kicker': { es: '01 · EL ÁLBUM', en: '01 · THE ALBUM' },
+    'disc.title': { es: 'El Álbum', en: 'The Album' },
+    'disc.meta': { es: 'WHAT YOU WANT · 8 TEMAS', en: 'WHAT YOU WANT · 8 TRACKS' },
+    'disc.note': { es: 'Pulsa cualquier tema para leer su letra.', en: 'Tap any track to read its lyrics.' },
+    'flag': { es: 'TEMA BANDERA', en: 'FLAGSHIP TRACK' },
+    'tba': { es: '[ Por anunciar ]', en: '[ To be announced ]' },
+    'cover.front': { es: 'PORTADA · FRONTAL', en: 'COVER · FRONT' },
+    'cover.back': { es: 'CONTRAPORTADA · TRACKLIST', en: 'BACK COVER · TRACKLIST' },
+    'ph.cover': { es: 'PORTADA · POR DETERMINAR', en: 'COVER · TO BE DETERMINED' },
+    'sym.kicker': { es: 'EL SÍMBOLO', en: 'THE SYMBOL' },
+    'sym.line': { es: 'Se agrieta, pero no cede.', en: 'It cracks, but it does not yield.' },
+    'sym.body': { es: 'El sistema empuja para rompernos. Pero lo esencial recibe el golpe y aprende a resistir.', en: 'The system pushes to break us. But what is essential takes the blow and learns to resist.' },
+    'band.kicker': { es: '02 · LA BANDA', en: '02 · THE BAND' },
+    'band.title': { es: 'La Banda', en: 'The Band' },
+    'band.sub': { es: 'Cinco siluetas. Pasa el cursor o toca para revelar.', en: 'Five silhouettes. Hover or tap to reveal.' },
+    'band.group': { es: 'FOTO GRUPAL · CON LANA', en: 'GROUP PHOTO · WITH LANA' },
+    'role.voice': { es: 'VOZ · FRONTMAN', en: 'VOCALS · FRONTMAN' },
+    'role.guitar': { es: 'GUITARRA', en: 'GUITAR' },
+    'role.bass': { es: 'BAJO', en: 'BASS' },
+    'role.drums': { es: 'BATERÍA', en: 'DRUMS' },
+    'role.dj': { es: 'DJ / SAMPLER', en: 'DJ / SAMPLER' },
+    'guests': { es: 'INVITADOS', en: 'GUESTS' },
+    'guests.note': { es: 'Voces invitadas · pasa el cursor o toca para revelar.', en: 'Guest voices · hover or tap to reveal.' },
+    'guest.tagF': { es: 'INVITADA', en: 'GUEST' },
+    'guest.tagM': { es: 'INVITADO', en: 'GUEST' },
+    'goran.desc': { es: 'Voz gutural invitada en "Dog of God"', en: 'Guest guttural vocals on "Dog of God"' },
+    'lana.desc': { es: 'Voz invitada en "Soft Luna" y "You and Me"', en: 'Guest vocals on "Soft Luna" and "You and Me"' },
+    'presave.title': { es: 'Disponible el 30 de junio', en: 'Out June 30' },
+    'presave.note': { es: 'Un clic y lo tendrás esperándote el día del estreno. Gratis.', en: 'One click and it\u2019ll be waiting for you on release day. Free.' },
+    'presave.btn': { es: 'PREGUARDAR EN SPOTIFY', en: 'PRE-SAVE ON SPOTIFY' },
+    'listen.kicker': { es: '03 · ESCUCHAR', en: '03 · LISTEN' },
+    'listen.title': { es: 'Escuchar', en: 'Listen' },
+    'listen.note': { es: 'El álbum aún no está distribuido.', en: 'The album is not distributed yet.' },
+    'listen.soon': { es: 'PRÓXIMAMENTE', en: 'COMING SOON' },
+    'disclaimer': { es: 'Música creada con asistencia de IA. Echo Collapse · universo Orothland.', en: 'Music created with AI assistance. Echo Collapse · Orothland universe.' }
+  };
+
+  componentDidMount() {
+    this.reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const root = this.rootEl || document;
+    this.root = root;
+    this.setupLang(root);
+    this.setupTracks(root);
+    this.setupMembers(root);
+    this.setupPresave(root);
+    this.setupReveal(root);
+    import('./lyrics.js').then(m => { this.LYRICS = m.LYRICS; this.setupLyrics(root); }).catch(e => console.error('lyrics load failed', e));
+    this.setupCanvas();
+    this._onScroll = () => this.onScroll();
+    this._onResize = () => this.resizeCanvas();
+    window.addEventListener('scroll', this._onScroll, { passive: true });
+    window.addEventListener('resize', this._onResize);
+    this.onScroll();
+  }
+
+  componentWillUnmount() {
+    cancelAnimationFrame(this._raf);
+    window.removeEventListener('scroll', this._onScroll);
+    window.removeEventListener('resize', this._onResize);
+  }
+
+  renderVals() {
+    return {
+      rootRef: this.rootRef, canvasRef: this.canvasRef, moonRef: this.moonRef,
+      towerLRef: this.towerLRef, towerRRef: this.towerRRef,
+      heroRef: this.heroRef, heroLogoRef: this.heroLogoRef, miniLogoRef: this.miniLogoRef, headerRef: this.headerRef
+    };
+  }
+
+  smooth(e0, e1, x) { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); }
+
+  /* ---------- language ---------- */
+  setupLang(root) {
+    const apply = (lang) => {
+      this.lang = lang;
+      root.querySelectorAll('[data-i18n]').forEach(el => {
+        const v = this.i18n[el.getAttribute('data-i18n')];
+        if (v) el.textContent = v[lang] || v.es;
+      });
+      root.querySelectorAll('[data-i18n-aria]').forEach(el => {
+        const v = this.i18n[el.getAttribute('data-i18n-aria')];
+        if (v) el.setAttribute('aria-label', v[lang] || v.es);
+      });
+      document.documentElement.lang = lang;
+      root.querySelectorAll('[data-lang-btn]').forEach(b => {
+        const on = b.getAttribute('data-lang-btn') === lang;
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        b.style.background = on ? '#0a0a0a' : 'transparent';
+        b.style.color = on ? '#f4f2ee' : '#8a867d';
+        b.style.fontWeight = on ? '700' : '400';
+      });
+    };
+    root.querySelectorAll('[data-lang-btn]').forEach(b => {
+      b.addEventListener('click', () => apply(b.getAttribute('data-lang-btn')));
+    });
+    apply('es');
+  }
+
+  /* ---------- tracklist micro-animation ---------- */
+  setupTracks(root) {
+    root.querySelectorAll('[data-track]').forEach(row => {
+      const title = row.querySelector('[data-track-title]');
+      const dot = row.querySelector('[data-dot]');
+      const flag = row.hasAttribute('data-flag');
+      const tba = title && title.hasAttribute && title.getAttribute('data-i18n') === 'tba';
+      const enter = () => {
+        if (dot) { dot.style.background = flag ? '#97392d' : '#0a0a0a'; dot.style.transform = 'scale(1.5)'; }
+        if (this.reduce || !title || tba) return;
+        title.style.animation = 'none'; void title.offsetWidth;
+        title.style.animation = flag ? 'ecGlitch .5s steps(2) 1' : 'ecBeat .55s ease 1';
+      };
+      const leave = () => {
+        if (dot) { dot.style.background = flag ? '#97392d' : (tba ? '#ddd7cc' : '#cdc6b9'); dot.style.transform = 'scale(1)'; }
+        if (title) title.style.animation = '';
+      };
+      row.addEventListener('mouseenter', enter);
+      row.addEventListener('mouseleave', leave);
+      if (title) title.addEventListener('animationend', () => { title.style.animation = ''; });
+    });
+  }
+
+  /* ---------- member silhouette -> photo reveal ---------- */
+  setupMembers(root) {
+    root.querySelectorAll('[data-member]').forEach(fig => {
+      const card = fig.querySelector('[data-card]');
+      const img = fig.querySelector('[data-portrait]');
+      if (!card || !img) return;
+      let pinned = false;
+      const show = () => { img.style.filter = 'none'; img.style.transform = 'scale(1)'; card.setAttribute('aria-pressed', 'true'); };
+      const hide = () => { if (pinned) return; img.style.filter = 'brightness(0)'; img.style.transform = 'scale(1.03)'; card.setAttribute('aria-pressed', 'false'); };
+      card.addEventListener('mouseenter', show);
+      card.addEventListener('mouseleave', hide);
+      card.addEventListener('focus', show);
+      card.addEventListener('blur', hide);
+      card.addEventListener('click', () => { pinned = !pinned; if (pinned) show(); else { img.style.filter = 'brightness(0)'; img.style.transform = 'scale(1.03)'; card.setAttribute('aria-pressed', 'false'); } });
+      card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); } });
+    });
+  }
+
+  /* ---------- pre-save CTA hover ---------- */
+  setupPresave(root) {
+    const btn = root.querySelector('[data-presave]');
+    if (!btn) return;
+    const enter = () => { btn.style.background = '#0a0a0a'; btn.style.borderColor = '#0a0a0a'; btn.style.transform = 'translateY(-2px)'; btn.style.boxShadow = '0 22px 46px -22px rgba(10,10,10,.85)'; };
+    const leave = () => { btn.style.background = '#97392d'; btn.style.borderColor = '#97392d'; btn.style.transform = 'translateY(0)'; btn.style.boxShadow = '0 16px 38px -22px rgba(151,57,45,.9)'; };
+    btn.addEventListener('mouseenter', enter);
+    btn.addEventListener('mouseleave', leave);
+    btn.addEventListener('focus', enter);
+    btn.addEventListener('blur', leave);
+  }
+
+  /* ---------- lyrics modal ---------- */
+  setupLyrics(root) {
+    const modal = root.querySelector('[data-lyrics-modal]');
+    if (!modal) return;
+    this.modalEl = modal;
+    const panel = modal.querySelector('[data-modal-panel]');
+    const bodyEl = modal.querySelector('[data-modal-body]');
+    const titleEl = modal.querySelector('[data-modal-title]');
+    const numEl = modal.querySelector('[data-modal-num]');
+    const labelEl = modal.querySelector('[data-modal-label]');
+    const closeBtn = modal.querySelector('[data-modal-close]');
+    const addLines = (cont, lines) => {
+      (lines || []).forEach((ln, i) => { if (i) cont.appendChild(document.createElement('br')); cont.appendChild(document.createTextNode(ln)); });
+    };
+    const open = (slug, num) => {
+      const song = this.LYRICS && this.LYRICS[slug];
+      if (!song) return;
+      const en = (this.lang === 'en');
+      if (labelEl) labelEl.textContent = en ? 'LYRICS' : 'LETRA';
+      if (numEl) numEl.textContent = num || '';
+      titleEl.textContent = song.title;
+      if (closeBtn) closeBtn.setAttribute('aria-label', en ? 'Close' : 'Cerrar');
+      bodyEl.innerHTML = '';
+      song.verses.forEach((v) => {
+        const block = document.createElement('div');
+        block.style.cssText = 'margin:0 0 30px';
+        const enEl = document.createElement('div');
+        enEl.style.cssText = "font-family:'Archivo',sans-serif;font-weight:500;font-size:clamp(15px,2.4vw,17px);line-height:1.62;color:#16140f";
+        addLines(enEl, v.en);
+        const esEl = document.createElement('div');
+        esEl.style.cssText = "font-family:'Archivo',sans-serif;font-style:italic;font-weight:400;font-size:clamp(13px,2.1vw,14.5px);line-height:1.58;color:#8a867d;margin-top:7px";
+        addLines(esEl, v.es);
+        block.appendChild(enEl); block.appendChild(esEl);
+        bodyEl.appendChild(block);
+      });
+      bodyEl.scrollTop = 0;
+      this._lastFocus = document.activeElement;
+      modal.style.display = 'flex';
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      requestAnimationFrame(() => { modal.style.opacity = '1'; if (panel) { panel.style.opacity = '1'; panel.style.transform = 'translateY(0)'; } });
+      if (closeBtn) closeBtn.focus();
+    };
+    const close = () => {
+      modal.style.opacity = '0';
+      if (panel) { panel.style.opacity = '0'; panel.style.transform = 'translateY(14px)'; }
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      clearTimeout(this._lyrT);
+      this._lyrT = setTimeout(() => { modal.style.display = 'none'; }, 240);
+      if (this._lastFocus && this._lastFocus.focus) this._lastFocus.focus();
+    };
+    this._openLyrics = open; this._closeLyrics = close;
+    root.querySelectorAll('[data-lyrics]').forEach(t => {
+      const slug = t.getAttribute('data-lyrics');
+      const r = t.closest('[data-track]');
+      const numSpan = r ? r.querySelector('span') : null;
+      const num = numSpan ? numSpan.textContent.trim() : '';
+      const go = (e) => { if (e) e.preventDefault(); open(slug, num); };
+      t.addEventListener('click', go);
+      t.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') go(e); });
+      t.addEventListener('mouseenter', () => { t.style.textDecoration = 'underline'; t.style.textUnderlineOffset = '4px'; t.style.textDecorationThickness = '1px'; t.style.textDecorationColor = '#97392d'; });
+      t.addEventListener('mouseleave', () => { t.style.textDecoration = 'none'; });
+    });
+    modal.querySelectorAll('[data-modal-close]').forEach(b => b.addEventListener('click', close));
+    if (closeBtn) {
+      closeBtn.addEventListener('mouseenter', () => { closeBtn.style.background = '#0a0a0a'; closeBtn.style.color = '#f4f2ee'; });
+      closeBtn.addEventListener('mouseleave', () => { closeBtn.style.background = 'transparent'; closeBtn.style.color = '#3a352d'; });
+    }
+    const bd = modal.querySelector('[data-modal-backdrop]');
+    if (bd) bd.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.style.display === 'flex') close(); });
+  }
+
+  /* ---------- emerge reveals ---------- */
+  setupReveal(root) {
+    const els = root.querySelectorAll('[data-reveal]');
+    if (this.reduce || !('IntersectionObserver' in window)) { els.forEach(e => this.showReveal(e)); return; }
+    const io = new IntersectionObserver((ents) => {
+      ents.forEach(en => { if (en.isIntersecting) { this.showReveal(en.target); io.unobserve(en.target); } });
+    }, { threshold: 0.2 });
+    els.forEach(e => io.observe(e));
+  }
+  showReveal(e) { e.style.opacity = '1'; e.style.transform = 'translateY(0)'; e.style.filter = 'blur(0)'; }
+
+  /* ---------- scroll: moon fade + shrink-to-sticky logo ---------- */
+  onScroll() {
+    const y = window.scrollY || 0;
+    const heroH = (this.heroEl && this.heroEl.offsetHeight) || window.innerHeight;
+    const hp = Math.max(0, Math.min(1, y / Math.max(1, heroH * 0.82)));
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    this.descent = max > 0 ? Math.min(1, y / max) : 0;
+    if (this.rootEl) this.rootEl.style.setProperty('--pg', this.descent.toFixed(3));
+
+    if (this.moonEl) {
+      const mo = (1 - this.smooth(0.0, 0.9, hp)) * 0.5;
+      this.moonEl.style.opacity = mo.toFixed(3);
+      this.moonEl.style.transform = 'translateX(-50%) translateY(' + (-hp * 50).toFixed(1) + 'px)';
+      this.moonEl.style.display = hp >= 0.999 ? 'none' : 'block';
+    }
+    if (this.heroLogoEl) {
+      const o = 1 - this.smooth(0.06, 0.46, hp);
+      const sc = 1 - 0.52 * this.smooth(0, 0.62, hp);
+      this.heroLogoEl.style.opacity = o.toFixed(3);
+      this.heroLogoEl.style.transform = 'scale(' + sc.toFixed(3) + ') translateY(' + (-hp * 26).toFixed(1) + 'px)';
+    }
+    const mini = this.smooth(0.42, 0.82, hp);
+    if (this.miniLogoEl) this.miniLogoEl.style.opacity = mini.toFixed(3);
+    if (this.headerEl) this.headerEl.style.opacity = mini.toFixed(3);
+
+    // lateral gothic towers rise from below as the visitor descends
+    const rise = this.smooth(0.0, 0.55, this.descent);
+    const ty = ((1 - rise) * 64).toFixed(1) + '%';
+    const narrow = window.innerWidth < 760;
+    const base = narrow ? 0.26 : 0.6;
+    const op = (base * this.smooth(0.02, 0.32, this.descent)).toFixed(3);
+    if (this.towerLEl) { this.towerLEl.style.transform = 'translate(-46%,' + ty + ')'; this.towerLEl.style.opacity = op; }
+    if (this.towerREl) { this.towerREl.style.transform = 'translate(46%,' + ty + ')'; this.towerREl.style.opacity = op; }
+  }
+
+  /* ---------- generative canvas: falling black soot + static ---------- */
+  setupCanvas() {
+    const c = this.canvasEl;
+    if (!c) return;
+    this.ctx = c.getContext('2d');
+    this.descent = 0;
+    this.sweeps = [];
+    this.makeNoise();
+    this.resizeCanvas();
+    if (this.reduce) { this.drawStaticFrame(); return; }
+    const loop = () => { this.draw(); this._raf = requestAnimationFrame(loop); };
+    this._raf = requestAnimationFrame(loop);
+  }
+  makeNoise() {
+    this.noise = [];
+    for (let n = 0; n < 4; n++) {
+      const nc = document.createElement('canvas');
+      nc.width = 240; nc.height = 60;
+      const nx = nc.getContext('2d');
+      const img = nx.createImageData(240, 60);
+      for (let i = 0; i < img.data.length; i += 4) {
+        const v = Math.random() < 0.5 ? 0 : 40;
+        img.data[i] = v; img.data[i + 1] = v; img.data[i + 2] = v;
+        img.data[i + 3] = Math.random() * 130;
+      }
+      nx.putImageData(img, 0, 0);
+      this.noise.push(nc);
+    }
+  }
+  resizeCanvas() {
+    const c = this.canvasEl;
+    if (!c) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    this.W = window.innerWidth; this.H = window.innerHeight;
+    c.width = this.W * dpr; c.height = this.H * dpr;
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.initParticles();
+    if (this.reduce) this.drawStaticFrame();
+  }
+  initParticles() {
+    const count = Math.min(260, Math.floor(this.W * this.H / 8200));
+    this.parts = [];
+    for (let i = 0; i < count; i++) this.parts.push(this.newPart(true));
+  }
+  newPart(rand) {
+    const debris = Math.random() < 0.16;
+    return {
+      x: Math.random() * this.W,
+      y: rand ? Math.random() * this.H : -14,
+      r: debris ? (1.6 + Math.random() * 2.6) : (0.5 + Math.random() * 1.8),
+      vy: 0.35 + Math.random() * 1.15,
+      vx: (Math.random() - 0.5) * 0.28,
+      a: debris ? (0.32 + Math.random() * 0.38) : (0.14 + Math.random() * 0.4),
+      debris: debris,
+      rot: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 0.06
+    };
+  }
+  drawStaticFrame() {
+    const ctx = this.ctx; if (!ctx) return;
+    ctx.clearRect(0, 0, this.W, this.H);
+    const n = Math.floor(this.W * this.H / 9000);
+    for (let i = 0; i < n; i++) {
+      ctx.globalAlpha = 0.1 + Math.random() * 0.35;
+      ctx.fillStyle = '#0a0a0a';
+      const x = Math.random() * this.W, y = Math.random() * this.H, s = 0.6 + Math.random() * 2;
+      ctx.fillRect(x, y, s, s * 1.6);
+    }
+    ctx.globalAlpha = 1;
+  }
+  draw() {
+    const ctx = this.ctx;
+    const d = this.descent || 0;
+    ctx.clearRect(0, 0, this.W, this.H);
+    for (const p of this.parts) {
+      p.vy += 0.004 * (1 + d);
+      p.y += p.vy * (1 + d * 0.6);
+      p.x += p.vx;
+      p.rot += p.vr;
+      if (p.y > this.H + 8) { Object.assign(p, this.newPart(false)); }
+      ctx.globalAlpha = p.a;
+      ctx.fillStyle = '#0a0a0a';
+      if (p.debris) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 1.7);
+        ctx.restore();
+      } else {
+        ctx.fillRect(p.x, p.y, p.r, p.r * 2);
+      }
+    }
+    ctx.globalAlpha = 1;
+    // intermittent static sweeps; intensity grows with descent
+    if (Math.random() < 0.014 + d * 0.06) {
+      this.sweeps.push({
+        y: Math.random() * this.H,
+        h: 5 + Math.random() * (22 + d * 60),
+        life: 0,
+        max: 5 + Math.random() * 12,
+        tile: this.noise[(Math.random() * this.noise.length) | 0]
+      });
+    }
+    for (let i = this.sweeps.length - 1; i >= 0; i--) {
+      const s = this.sweeps[i];
+      s.life++;
+      const fade = 1 - s.life / s.max;
+      if (fade <= 0) { this.sweeps.splice(i, 1); continue; }
+      ctx.globalAlpha = (0.05 + d * 0.05) * fade;
+      ctx.drawImage(s.tile, 0, s.y, this.W, s.h);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+</script>
+</body>
+</html>
